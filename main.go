@@ -47,6 +47,8 @@ Please ensure your code is accurate and error-free. Double-check everything befo
 
 Your response is limited to 4028 tokens, so you must absolutely be sure that your response is under that. I suggest giving yourself a hard limit of 3000 tokens, just to be sure.
 
+Remember that you should only return code without explanation. Your output must start with 'package main' and end with '}'.
+
 The code will be given after '=CODE=' and the prompt will be given after '=PROMPT='.`
 
 	p += "\n\n=CODE=\n\n" + mainGo

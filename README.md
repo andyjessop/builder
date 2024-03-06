@@ -1,69 +1,41 @@
-# Project Title
+# Main.go
 
-This project consists of a single Go file named `main.go`, which contains the main function.
+This Go program implements a simple command-line tool for generating random passwords.
 
-## Purpose
+## Description
 
-The purpose of this project is to [brief description of the project's purpose or goal].
+The `main` function is the entry point of the program. It performs the following steps:
 
-## Functionality
-
-The `main` function in `main.go` performs the following steps:
-
-1. [Step 1 description]
-2. [Step 2 description]
-3. [Step 3 description]
-   - [Substep 3a description]
-   - [Substep 3b description]
-4. [Step 4 description]
-5. [Step 5 description]
+1. Parses command-line flags to determine the desired length of the password and whether to include symbols in the generated password.
+2. Defines a character set containing lowercase letters, uppercase letters, digits, and optionally symbols based on the user's preference.
+3. Initializes a `strings.Builder` to efficiently build the password string.
+4. Seeds the random number generator with the current time to ensure different random sequences across program runs.
+5. Generates a random password by repeatedly selecting random characters from the character set and appending them to the `strings.Builder` until the desired password length is reached.
+6. Prints the generated password to the console.
 
 ## Usage
 
-To run the program, follow these steps:
+To use the program, run the `main.go` file with the following optional command-line flags:
 
-1. [Step 1 to run the program]
-2. [Step 2 to run the program]
-3. [Step 3 to run the program]
+- `-length`: Specifies the desired length of the generated password. Default is 16.
+- `-symbols`: Specifies whether to include symbols in the generated password. Default is false.
+
+Example usage:
+```
+go run main.go -length=20 -symbols
+```
+
+This will generate a random password with a length of 20 characters, including symbols.
 
 ## Dependencies
 
-This project has the following dependencies:
-
-- [Dependency 1]
-- [Dependency 2]
-- [Dependency 3]
-
-Make sure to install these dependencies before running the program.
-
-## Configuration
-
-The program can be configured by modifying the following variables in `main.go`:
-
-- `variable1`: [Description of variable1]
-- `variable2`: [Description of variable2]
-- `variable3`: [Description of variable3]
-
-Adjust these variables according to your needs.
-
-## Error Handling
-
-The program includes error handling for the following scenarios:
-
-- [Error scenario 1]: [Description of how it's handled]
-- [Error scenario 2]: [Description of how it's handled]
-- [Error scenario 3]: [Description of how it's handled]
-
-If any of these errors occur, the program will [description of error handling behavior].
+The program uses the following packages from the Go standard library:
+- `flag`: For parsing command-line flags.
+- `fmt`: For printing the generated password.
+- `math/rand`: For generating random numbers.
+- `strings`: For efficiently building the password string.
+- `time`: For seeding the random number generator.
 
 ## License
 
-This project is licensed under the [License Name] License. See the [LICENSE](LICENSE) file for more information.
-
-## Contributing
-
-Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
-
-## Contact
-
-If you have any questions or need further assistance, feel free to contact the project maintainer at [maintainer@example.com](mailto:maintainer@example.com).
+This program is open-source and available under the [MIT License](https://opensource.org/licenses/MIT).

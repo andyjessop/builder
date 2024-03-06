@@ -80,7 +80,7 @@ func main() {
 
 	// Generate README.md content
 	fmt.Printf("\033[33mGetting README.md content...\033[0m\n")
-	readmeContent, err := getReadmeResponse(apiKey)
+	readmeContent, err := getReadmeResponse(responseText, apiKey)
 	if err != nil {
 		fmt.Printf("Error getting README.md content: %v\n", err)
 		return
@@ -207,7 +207,7 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	return trimmedText, nil
 }
 
-func getReadmeResponse(apiKey string) (string, error) {
+func getReadmeResponse(codeResponse string, apiKey string) (string, error) {
 	p := `You are tasked with generating a README.md file for a project. The project consists of a single file named main.go. Your job is to generate a concise and informative README.md that describes the purpose and functionality of the main.go file.
 
 Detail what the main function does from start to finish.
@@ -220,7 +220,11 @@ You must output the full markdown content, from start to finish. Do not leave an
 
 Your output must start with '#'.
 
-Your response is limited to 4028 tokens, so you must absolutely be sure that your response is under that. I suggest giving yourself a hard limit of 3000 tokens, just to be sure.`
+Your response is limited to 4028 tokens, so you must absolutely be sure that your response is under that. I suggest giving yourself a hard limit of 3000 tokens, just to be sure.
+
+The code for the main.go file will be given after '=CODE='.`
+
+	p += "\n\n=CODE=\n\n" + codeResponse
 
 	maxRetries := 10
 	retryDelay := 5 * time.Second

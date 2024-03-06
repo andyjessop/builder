@@ -1,6 +1,3 @@
-Here's the updated main.go code with the success log in green:
-
-```go
 package main
 
 import (
@@ -214,6 +211,3 @@ func addAndCommitChanges(branchName string) error {
 
 	return nil
 }
-```
-
-The modification is in the last line of the `main` function. I used the ANSI escape code `\033[32m` to set the text color to green and `\033[0m` to reset the color back to the default. This will make the success log appear in green color in the terminal.

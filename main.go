@@ -56,26 +56,41 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	p += "\n\n=CODE=\n\n" + mainGo
 	p += "\n\n=PROMPT=\n\n" + prompt
 
-	response, err := ask(p, apiKey)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
 	var apiResponse struct {
 		Content []struct {
 			Text string `json:"text"`
 		} `json:"content"`
 	}
 
-	err = json.Unmarshal([]byte(response), &apiResponse)
-	if err != nil {
-		fmt.Println("Error unmarshaling JSON response:", err)
-		return
+	maxRetries := 10
+	retryDelay := 5 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		response, err := ask(p, apiKey)
+		if err != nil {
+			fmt.Printf("Error (attempt %d/%d): %v\n", i+1, maxRetries, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		err = json.Unmarshal([]byte(response), &apiResponse)
+		if err != nil {
+			fmt.Printf("Error unmarshaling JSON response (attempt %d/%d): %v\n", i+1, maxRetries, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		if len(apiResponse.Content) == 0 {
+			fmt.Printf("Empty response content (attempt %d/%d)\n", i+1, maxRetries)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		break
 	}
 
 	if len(apiResponse.Content) == 0 {
-		fmt.Println("Empty response content")
+		fmt.Println("Failed to get a valid response after", maxRetries, "attempts")
 		return
 	}
 

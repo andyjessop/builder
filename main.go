@@ -101,6 +101,20 @@ func main() {
 		return
 	}
 
+	// Generate README.md content
+	readmeContent, err := getReadmeResponse(apiKey)
+	if err != nil {
+		fmt.Printf("Error getting README.md content: %v\n", err)
+		return
+	}
+
+	// Write the README.md content to a file
+	err = writeStringToFile(readmeContent, "README.md")
+	if err != nil {
+		fmt.Printf("Error writing README.md file: %v\n", err)
+		return
+	}
+
 	// Add and commit the changes
 	err = addAndCommitChanges(branchName)
 	if err != nil {
@@ -116,7 +130,7 @@ func main() {
 	}
 
 	// Print success message in green color
-	fmt.Printf("\033[32mSuccessfully created branch %s, wrote response to %s, and committed the changes\033[0m\n", branchName, *filePath)
+	fmt.Printf("\033[32mSuccessfully created branch %s, wrote response to %s and README.md, and committed the changes\033[0m\n", branchName, *filePath)
 }
 
 func getCodeResponse(targetFileContent, prompt, apiKey string) (string, error) {
@@ -136,6 +150,67 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 
 	p += "\n\n=CODE=\n\n" + targetFileContent
 	p += "\n\n=PROMPT=\n\n" + prompt
+
+	maxRetries := 10
+	retryDelay := 5 * time.Second
+
+	var apiResponse struct {
+		Content []struct {
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+
+	for i := 0; i < maxRetries; i++ {
+		response, err := ask(p, apiKey)
+		if err != nil {
+			fmt.Printf("Error (attempt %d/%d): %v\n", i+1, maxRetries, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		err = json.Unmarshal([]byte(response), &apiResponse)
+		if err != nil {
+			fmt.Printf("Error unmarshaling JSON response (attempt %d/%d): %v\n", i+1, maxRetries, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		if len(apiResponse.Content) == 0 {
+			fmt.Printf("\033[33mEmpty LLM response content. Retrying...\033[0m\n")
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		break
+	}
+
+	if len(apiResponse.Content) == 0 {
+		return "", fmt.Errorf("failed to get a valid response after %d attempts", maxRetries)
+	}
+
+	responseText := apiResponse.Content[0].Text
+
+	// Unescape HTML entities in the response text
+	unescapedText := html.UnescapeString(responseText)
+
+	// Trim any leading or trailing whitespace, newlines, or backticks
+	trimmedText := strings.TrimSpace(unescapedText)
+	trimmedText = strings.Trim(trimmedText, "\n")
+	trimmedText = strings.Trim(trimmedText, "`")
+
+	return trimmedText, nil
+}
+
+func getReadmeResponse(apiKey string) (string, error) {
+	p := `You are tasked with generating a README.md file for a project. The project consists of a single file named main.go. Your job is to generate a concise and informative README.md that describes the purpose and functionality of the main.go file.
+
+Remember, you MUST return ONLY the markdown content for the README.md file. Do not include any other explanations or additional text. It is absolutely crucial that you adhere to this rule.
+
+Please ensure your markdown is accurate and error-free. Double-check everything before returning your response. Aim for zero mistakes.
+
+You must output the full markdown content, from start to finish. Do not leave anything out.
+
+Your response is limited to 4028 tokens, so you must absolutely be sure that your response is under that. I suggest giving yourself a hard limit of 3000 tokens, just to be sure.`
 
 	maxRetries := 10
 	retryDelay := 5 * time.Second

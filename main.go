@@ -24,7 +24,15 @@ const (
 	contentType     = "application/json"
 	anthropicHeader = "anthropic-version"
 	anthropicValue  = "2023-06-01"
+	maxRetries      = 10
+	retryDelay      = 5 * time.Second
 )
+
+type apiResponse struct {
+	Content []struct {
+		Text string `json:"text"`
+	} `json:"content"`
+}
 
 func main() {
 	err := godotenv.Load()
@@ -34,6 +42,10 @@ func main() {
 	}
 
 	apiKey := os.Getenv("API_KEY")
+	if apiKey == "" {
+		fmt.Println("API_KEY not set in .env file")
+		return
+	}
 
 	cwf, err := os.Executable()
 	if err != nil {
@@ -64,9 +76,9 @@ func main() {
 	scanner.Scan()
 	prompt := scanner.Text()
 
-	targetFileContent, err := convertFileToString(*filePath)
+	targetFileContent, err := readFileAsString(*filePath)
 	if err != nil {
-		fmt.Printf("Error converting file %s to string: %v\n", *filePath, err)
+		fmt.Printf("Error reading file %s: %v\n", *filePath, err)
 		return
 	}
 
@@ -149,52 +161,7 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	p += "\n\n=CODE=\n\n" + targetFileContent
 	p += "\n\n=PROMPT=\n\n" + prompt
 
-	maxRetries := 10
-	retryDelay := 5 * time.Second
-
-	var apiResponse struct {
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
-	}
-
-	for i := 0; i < maxRetries; i++ {
-		response, err := ask(p, apiKey)
-		if err != nil {
-			fmt.Printf("Error (attempt %d/%d): %v\n", i+1, maxRetries, err)
-			time.Sleep(retryDelay)
-			continue
-		}
-
-		err = json.Unmarshal([]byte(response), &apiResponse)
-		if err != nil {
-			fmt.Printf("Error unmarshaling JSON response (attempt %d/%d): %v\n", i+1, maxRetries, err)
-			time.Sleep(retryDelay)
-			continue
-		}
-
-		if len(apiResponse.Content) == 0 {
-			fmt.Printf("\033[33mEmpty LLM response content. Retrying...\033[0m\n")
-			time.Sleep(retryDelay)
-			continue
-		}
-
-		break
-	}
-
-	if len(apiResponse.Content) == 0 {
-		return "", fmt.Errorf("failed to get a valid response after %d attempts", maxRetries)
-	}
-
-	responseText := apiResponse.Content[0].Text
-
-	unescapedText := html.UnescapeString(responseText)
-
-	trimmedText := strings.TrimSpace(unescapedText)
-	trimmedText = strings.Trim(trimmedText, "\n")
-	trimmedText = strings.Trim(trimmedText, "`")
-
-	return trimmedText, nil
+	return sendAPIRequest(p, apiKey)
 }
 
 func getReadmeResponse(codeResponse string, apiKey string) (string, error) {
@@ -218,55 +185,10 @@ The code for the main.go file will be given after '=CODE='.`
 
 	p += "\n\n=CODE=\n\n" + codeResponse
 
-	maxRetries := 10
-	retryDelay := 5 * time.Second
-
-	var apiResponse struct {
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
-	}
-
-	for i := 0; i < maxRetries; i++ {
-		response, err := ask(p, apiKey)
-		if err != nil {
-			fmt.Printf("Error (attempt %d/%d): %v\n", i+1, maxRetries, err)
-			time.Sleep(retryDelay)
-			continue
-		}
-
-		err = json.Unmarshal([]byte(response), &apiResponse)
-		if err != nil {
-			fmt.Printf("Error unmarshaling JSON response (attempt %d/%d): %v\n", i+1, maxRetries, err)
-			time.Sleep(retryDelay)
-			continue
-		}
-
-		if len(apiResponse.Content) == 0 {
-			fmt.Printf("\033[33mEmpty LLM response content. Retrying...\033[0m\n")
-			time.Sleep(retryDelay)
-			continue
-		}
-
-		break
-	}
-
-	if len(apiResponse.Content) == 0 {
-		return "", fmt.Errorf("failed to get a valid response after %d attempts", maxRetries)
-	}
-
-	responseText := apiResponse.Content[0].Text
-
-	unescapedText := html.UnescapeString(responseText)
-
-	trimmedText := strings.TrimSpace(unescapedText)
-	trimmedText = strings.Trim(trimmedText, "\n")
-	trimmedText = strings.Trim(trimmedText, "`")
-
-	return trimmedText, nil
+	return sendAPIRequest(p, apiKey)
 }
 
-func ask(message string, apiKey string) (string, error) {
+func sendAPIRequest(message string, apiKey string) (string, error) {
 	data := map[string]interface{}{
 		"model":      model,
 		"max_tokens": 4096,
@@ -291,21 +213,56 @@ func ask(message string, apiKey string) (string, error) {
 	req.Header.Set(anthropicHeader, anthropicValue)
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("error sending request: %w", err)
-	}
-	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("error reading body: %w", err)
+	var apiResp apiResponse
+	for i := 0; i < maxRetries; i++ {
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Printf("Error (attempt %d/%d): %v\n", i+1, maxRetries, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Printf("Error reading response body (attempt %d/%d): %v\n", i+1, maxRetries, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		err = json.Unmarshal(body, &apiResp)
+		if err != nil {
+			fmt.Printf("Error unmarshaling JSON response (attempt %d/%d): %v\n", i+1, maxRetries, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		if len(apiResp.Content) == 0 {
+			fmt.Printf("\033[33mEmpty LLM response content. Retrying...\033[0m\n")
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		break
 	}
 
-	return string(body), nil
+	if len(apiResp.Content) == 0 {
+		return "", fmt.Errorf("failed to get a valid response after %d attempts", maxRetries)
+	}
+
+	responseText := apiResp.Content[0].Text
+
+	unescapedText := html.UnescapeString(responseText)
+
+	trimmedText := strings.TrimSpace(unescapedText)
+	trimmedText = strings.Trim(trimmedText, "\n")
+	trimmedText = strings.Trim(trimmedText, "`")
+
+	return trimmedText, nil
 }
 
-func convertFileToString(filePath string) (string, error) {
+func readFileAsString(filePath string) (string, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("error reading file: %w", err)

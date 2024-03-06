@@ -68,6 +68,58 @@ func main() {
 		return
 	}
 
+	responseText, err := getCodeResponse(targetFileContent, prompt, apiKey)
+	if err != nil {
+		fmt.Printf("Error getting code response: %v\n", err)
+		return
+	}
+
+	// Prompt for the branch name
+	fmt.Printf("\033[32mSuccessfully generated new code.\033[0m\n")
+	fmt.Print("Enter the new branch name: ")
+	scanner.Scan()
+	branchName := scanner.Text()
+
+	// Initialize a new Git repository if it doesn't exist
+	err = initGitRepo()
+	if err != nil {
+		fmt.Printf("Error initializing Git repository: %v\n", err)
+		return
+	}
+
+	// Create a new branch
+	err = createBranch(branchName)
+	if err != nil {
+		fmt.Printf("Error creating branch: %v\n", err)
+		return
+	}
+
+	// Write the response to the specified file
+	err = writeStringToFile(responseText, filepath.Base(*filePath))
+	if err != nil {
+		fmt.Printf("Error writing response to file %s: %v\n", *filePath, err)
+		return
+	}
+
+	// Add and commit the changes
+	err = addAndCommitChanges(branchName)
+	if err != nil {
+		fmt.Printf("Error adding and committing changes: %v\n", err)
+		return
+	}
+
+	// Change back to the original working directory
+	err = os.Chdir(cwd)
+	if err != nil {
+		fmt.Printf("Error changing back to the original directory: %v\n", err)
+		return
+	}
+
+	// Print success message in green color
+	fmt.Printf("\033[32mSuccessfully created branch %s, wrote response to %s, and committed the changes\033[0m\n", branchName, *filePath)
+}
+
+func getCodeResponse(targetFileContent, prompt, apiKey string) (string, error) {
 	p := `You are an expert Golang programmer with many years of experience - nothing is beyond you. But you know only code, not spoken languages. When you return your response, you must only return code. Golang code. Nothing else. It is absolutely crucial that you adhere to this rule. What you return will be written directly to disk in a mission-critical file. The code you write will be a Go file, so it should include the "package" declaration, any imports, and the necessary functions. Your code should be written in a human-readable manner, and all error messages should be very explicit and lead the reader by the hand to the right fix.
 
 Below, you will be given the current code for the target file. It is your job to return new code adhering to the prompt. You should return the full file code. Do not import anything outside of the standard library. Only use the standard library.
@@ -85,14 +137,14 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	p += "\n\n=CODE=\n\n" + targetFileContent
 	p += "\n\n=PROMPT=\n\n" + prompt
 
+	maxRetries := 10
+	retryDelay := 5 * time.Second
+
 	var apiResponse struct {
 		Content []struct {
 			Text string `json:"text"`
 		} `json:"content"`
 	}
-
-	maxRetries := 10
-	retryDelay := 5 * time.Second
 
 	for i := 0; i < maxRetries; i++ {
 		response, err := ask(p, apiKey)
@@ -119,11 +171,12 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	}
 
 	if len(apiResponse.Content) == 0 {
-		fmt.Println("Failed to get a valid response after", maxRetries, "attempts")
-		return
+		return "", fmt.Errorf("failed to get a valid response after %d attempts", maxRetries)
 	}
 
 	responseText := apiResponse.Content[0].Text
+
+	// Unescape HTML entities in the response text
 	unescapedText := html.UnescapeString(responseText)
 
 	// Trim any leading or trailing whitespace, newlines, or backticks
@@ -131,49 +184,7 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	trimmedText = strings.Trim(trimmedText, "\n")
 	trimmedText = strings.Trim(trimmedText, "`")
 
-	// Prompt for the branch name
-	fmt.Printf("\033[32mSuccessfully generated new code.\033[0m\n")
-	fmt.Print("Enter the new branch name: ")
-	scanner.Scan()
-	branchName := scanner.Text()
-
-	// Initialize a new Git repository if it doesn't exist
-	err = initGitRepo()
-	if err != nil {
-		fmt.Printf("Error initializing Git repository: %v\n", err)
-		return
-	}
-
-	// Create a new branch
-	err = createBranch(branchName)
-	if err != nil {
-		fmt.Printf("Error creating branch: %v\n", err)
-		return
-	}
-
-	// Write the response to the specified file
-	err = writeStringToFile(trimmedText, filepath.Base(*filePath))
-	if err != nil {
-		fmt.Printf("Error writing response to file %s: %v\n", *filePath, err)
-		return
-	}
-
-	// Add and commit the changes
-	err = addAndCommitChanges(branchName)
-	if err != nil {
-		fmt.Printf("Error adding and committing changes: %v\n", err)
-		return
-	}
-
-	// Change back to the original working directory
-	err = os.Chdir(cwd)
-	if err != nil {
-		fmt.Printf("Error changing back to the original directory: %v\n", err)
-		return
-	}
-
-	// Print success message in green color
-	fmt.Printf("\033[32mSuccessfully created branch %s, wrote response to %s, and committed the changes\033[0m\n", branchName, *filePath)
+	return trimmedText, nil
 }
 
 func ask(message string, apiKey string) (string, error) {
@@ -191,14 +202,12 @@ func ask(message string, apiKey string) (string, error) {
 	}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		fmt.Println("Error marshaling JSON:", err)
-		return "", err
+		return "", fmt.Errorf("error marshaling JSON: %w", err)
 	}
 	// Create a new HTTP request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return "", err
+		return "", fmt.Errorf("error creating request: %w", err)
 	}
 
 	// Set headers
@@ -210,16 +219,14 @@ func ask(message string, apiKey string) (string, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return "", err
+		return "", fmt.Errorf("error sending request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read and print the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading body:", err)
-		return "", err
+		return "", fmt.Errorf("error reading body: %w", err)
 	}
 
 	return string(body), nil
@@ -229,7 +236,7 @@ func convertFileToString(filePath string) (string, error) {
 	// Read the contents of the file
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error reading file: %w", err)
 	}
 
 	// Convert the content to a string

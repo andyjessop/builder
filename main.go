@@ -81,7 +81,7 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 		}
 
 		if len(apiResponse.Content) == 0 {
-			fmt.Printf("Empty response content (attempt %d/%d)\n", i+1, maxRetries)
+			fmt.Printf("\033[33mEmpty LLM response content. Retrying...\033[0m\n")
 			time.Sleep(retryDelay)
 			continue
 		}

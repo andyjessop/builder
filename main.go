@@ -102,8 +102,12 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	trimmedText = strings.Trim(trimmedText, "\n")
 	trimmedText = strings.Trim(trimmedText, "`")
 
+	// Prompt for the branch name
+	fmt.Print("Enter the branch name: ")
+	scanner.Scan()
+	branchName := scanner.Text()
+
 	// Create a new branch
-	branchName := fmt.Sprintf("branch-%d", time.Now().Unix())
 	err = createBranch(branchName)
 	if err != nil {
 		fmt.Printf("Error creating branch: %v\n", err)

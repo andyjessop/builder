@@ -1,41 +1,58 @@
-# Main.go
+# Go Project README
 
-This Go program implements a simple command-line tool for generating random passwords.
+## Overview
 
-## Description
+This Go project consists of a single `main.go` file that performs the following tasks:
 
-The `main` function is the entry point of the program. It performs the following steps:
-
-1. Parses command-line flags to determine the desired length of the password and whether to include symbols in the generated password.
-2. Defines a character set containing lowercase letters, uppercase letters, digits, and optionally symbols based on the user's preference.
-3. Initializes a `strings.Builder` to efficiently build the password string.
-4. Seeds the random number generator with the current time to ensure different random sequences across program runs.
-5. Generates a random password by repeatedly selecting random characters from the character set and appending them to the `strings.Builder` until the desired password length is reached.
-6. Prints the generated password to the console.
-
-## Usage
-
-To use the program, run the `main.go` file with the following optional command-line flags:
-
-- `-length`: Specifies the desired length of the generated password. Default is 16.
-- `-symbols`: Specifies whether to include symbols in the generated password. Default is false.
-
-Example usage:
-```
-go run main.go -length=20 -symbols
-```
-
-This will generate a random password with a length of 20 characters, including symbols.
+1. Loads environment variables from a `.env` file.
+2. Parses command-line flags to get the file path to overwrite.
+3. Prompts the user to enter a prompt and reads the input.
+4. Converts the content of the specified file to a string.
+5. Sends the file content and user prompt to an API to get a code response.
+6. Generates a README.md file based on the code response.
+7. Prompts the user to enter a new branch name.
+8. Initializes a Git repository in the current directory.
+9. Creates a new branch with the specified name.
+10. Writes the code response to the specified file.
+11. Writes the generated README.md content to a file.
+12. Adds and commits the changes to the Git repository on the new branch.
 
 ## Dependencies
 
-The program uses the following packages from the Go standard library:
-- `flag`: For parsing command-line flags.
-- `fmt`: For printing the generated password.
-- `math/rand`: For generating random numbers.
-- `strings`: For efficiently building the password string.
-- `time`: For seeding the random number generator.
+The project uses the following external dependencies:
 
-## License
+- `github.com/joho/godotenv`: Used for loading environment variables from a `.env` file.
 
-This program is open-source and available under the [MIT License](https://opensource.org/licenses/MIT).
+## Usage
+
+To run the project, follow these steps:
+
+1. Set the `API_KEY` environment variable in a `.env` file.
+2. Run the `main.go` file with the following command-line flag:
+   - `--file`: Specifies the path of the file to overwrite (default: `./main.go`).
+3. Enter a prompt when prompted.
+4. Enter a new branch name when prompted.
+
+The project will generate a new code file based on the provided prompt, create a README.md file, and commit the changes to a new branch in the Git repository.
+
+## Functions
+
+The `main.go` file contains the following functions:
+
+- `main()`: The entry point of the program. It orchestrates the entire process of loading environment variables, parsing flags, getting user input, generating code and README, initializing a Git repository, creating a new branch, writing files, and committing changes.
+- `getCodeResponse(targetFileContent, prompt, apiKey string) (string, error)`: Sends the target file content and user prompt to an API to get a code response. It retries the API request multiple times if needed.
+- `getReadmeResponse(codeResponse string, apiKey string) (string, error)`: Generates a README.md file based on the code response. It retries the API request multiple times if needed.
+- `ask(message string, apiKey string) (string, error)`: Sends a request to the Anthropic API with the provided message and API key. It returns the API response as a string.
+- `convertFileToString(filePath string) (string, error)`: Reads the content of a file and returns it as a string.
+- `writeStringToFile(content string, filename string) error`: Writes the provided content to a file with the specified filename.
+- `initGitRepo() error`: Initializes a Git repository in the current directory if it doesn't exist.
+- `createBranch(branchName string) error`: Creates a new branch with the specified name in the Git repository.
+- `addAndCommitChanges(branchName string) error`: Adds all changes to the Git repository and commits them with a message including the branch name.
+
+## Error Handling
+
+The project includes error handling for various operations, such as loading environment variables, parsing flags, reading files, making API requests, and executing Git commands. Errors are logged to the console, and the program terminates gracefully if an error occurs.
+
+## Acknowledgements
+
+The project utilizes the Anthropic API for generating code responses and README content. It also relies on the `godotenv` package for loading environment variables from a `.env` file.

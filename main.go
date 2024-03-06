@@ -68,6 +68,7 @@ func main() {
 		return
 	}
 
+	fmt.Printf("\033[33mGetting code response...\033[0m\n")
 	responseText, err := getCodeResponse(targetFileContent, prompt, apiKey)
 	if err != nil {
 		fmt.Printf("Error getting code response: %v\n", err)
@@ -78,6 +79,7 @@ func main() {
 	fmt.Printf("\033[32mSuccessfully generated new code.\033[0m\n")
 
 	// Generate README.md content
+	fmt.Printf("\033[33mGetting README.md content...\033[0m\n")
 	readmeContent, err := getReadmeResponse(apiKey)
 	if err != nil {
 		fmt.Printf("Error getting README.md content: %v\n", err)

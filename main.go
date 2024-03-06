@@ -50,6 +50,7 @@ func main() {
 	fileDir := filepath.Dir(*filePath)
 
 	// Change to the file directory
+	fmt.Printf("\033[33mChanging to directory %s\033[0m\n", fileDir)
 	err = os.Chdir(fileDir)
 	if err != nil {
 		fmt.Printf("Error changing to directory %s: %v\n", fileDir, err)
@@ -123,6 +124,7 @@ func main() {
 	}
 
 	// Change back to the original working directory
+	fmt.Printf("\033[33mChanging back to the original directory %s\033[0m\n", cwd)
 	err = os.Chdir(cwd)
 	if err != nil {
 		fmt.Printf("Error changing back to the original directory: %v\n", err)

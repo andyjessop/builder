@@ -45,6 +45,8 @@ Below, you will be given the current code for main.go. It is your job to return 
 
 Please ensure your code is accurate and error-free. Double-check everything before returning your response. Aim for zero mistakes.
 
+You must output the full code, from start to finish. Do not leave anything out.
+
 Your response is limited to 4028 tokens, so you must absolutely be sure that your response is under that. I suggest giving yourself a hard limit of 3000 tokens, just to be sure.
 
 Remember that you should only return code without explanation. Your output must start with 'package main' and end with '}'.

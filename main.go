@@ -19,6 +19,12 @@ import (
 )
 
 func main() {
+	cwf, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	cwd := filepath.Dir(cwf)
+
 	// Define the command line flag for the file path
 	filePath := flag.String("file", "./main.go", "Path of the file to overwrite")
 	flag.Parse()
@@ -34,7 +40,7 @@ func main() {
 	fileDir := filepath.Dir(*filePath)
 
 	// Change to the file directory
-	err := os.Chdir(fileDir)
+	err = os.Chdir(fileDir)
 	if err != nil {
 		fmt.Printf("Error changing to directory %s: %v\n", fileDir, err)
 		return
@@ -160,7 +166,7 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	}
 
 	// Change back to the original working directory
-	err = os.Chdir("..")
+	err = os.Chdir(cwd)
 	if err != nil {
 		fmt.Printf("Error changing back to the original directory: %v\n", err)
 		return

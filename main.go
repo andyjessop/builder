@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,7 +20,7 @@ import (
 
 func main() {
 	// Define the command line flag for the file path
-	filePath := flag.String("file", "", "Path of the file to overwrite")
+	filePath := flag.String("file", "./main.go", "Path of the file to overwrite")
 	flag.Parse()
 
 	// Check if the file path is provided
@@ -29,8 +30,18 @@ func main() {
 		return
 	}
 
+	// Get the directory of the file path
+	fileDir := filepath.Dir(*filePath)
+
+	// Change to the file directory
+	err := os.Chdir(fileDir)
+	if err != nil {
+		fmt.Printf("Error changing to directory %s: %v\n", fileDir, err)
+		return
+	}
+
 	// Load environment variables from .env file
-	err := godotenv.Load()
+	err = godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file")
 		return
@@ -120,6 +131,13 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	scanner.Scan()
 	branchName := scanner.Text()
 
+	// Initialize a new Git repository if it doesn't exist
+	err = initGitRepo()
+	if err != nil {
+		fmt.Printf("Error initializing Git repository: %v\n", err)
+		return
+	}
+
 	// Create a new branch
 	err = createBranch(branchName)
 	if err != nil {
@@ -128,7 +146,7 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	}
 
 	// Write the response to the specified file
-	err = writeStringToFile(trimmedText, *filePath)
+	err = writeStringToFile(trimmedText, filepath.Base(*filePath))
 	if err != nil {
 		fmt.Printf("Error writing response to file %s: %v\n", *filePath, err)
 		return
@@ -138,6 +156,13 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	err = addAndCommitChanges(branchName)
 	if err != nil {
 		fmt.Printf("Error adding and committing changes: %v\n", err)
+		return
+	}
+
+	// Change back to the original working directory
+	err = os.Chdir("..")
+	if err != nil {
+		fmt.Printf("Error changing back to the original directory: %v\n", err)
 		return
 	}
 
@@ -215,6 +240,24 @@ func writeStringToFile(content string, filename string) error {
 	_, err = file.WriteString(content)
 	if err != nil {
 		return fmt.Errorf("error writing to file: %w", err)
+	}
+
+	return nil
+}
+
+func initGitRepo() error {
+	// Check if the current directory is already a Git repository
+	_, err := os.Stat(".git")
+	if err == nil {
+		// Git repository already exists, no need to initialize
+		return nil
+	}
+
+	// Initialize a new Git repository
+	cmd := exec.Command("git", "init")
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error initializing Git repository: %w", err)
 	}
 
 	return nil

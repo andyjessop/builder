@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"html"
 	"io"
@@ -17,6 +18,17 @@ import (
 )
 
 func main() {
+	// Define the command line flag for the file path
+	filePath := flag.String("file", "", "Path of the file to overwrite")
+	flag.Parse()
+
+	// Check if the file path is provided
+	if *filePath == "" {
+		fmt.Println("Error: File path not provided. Please use the --file flag to specify the file path.")
+		flag.Usage()
+		return
+	}
+
 	// Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
@@ -33,15 +45,15 @@ func main() {
 	scanner.Scan()
 	prompt := scanner.Text()
 
-	mainGo, err := convertMainGoToString()
+	targetFileContent, err := convertFileToString(*filePath)
 	if err != nil {
-		fmt.Println("Error converting main.go to string:", err)
+		fmt.Printf("Error converting file %s to string: %v\n", *filePath, err)
 		return
 	}
 
-	p := `You are an expert Golang programmer with many years of experience - nothing is beyond you. But you know only code, not spoken languages. When you return your response, you must only return code. Golang code. Nothing else. It is absolutely crucial that you adhere to this rule. What you return will be written directly to disk in a mission-critical file. The code you write will be a main.go file, so it should include the "package main", any imports, and of course the main function. Your code should be written in a human-readable manner, and all error messages should be very explicit and lead the reader by the hand to the right fix.
+	p := `You are an expert Golang programmer with many years of experience - nothing is beyond you. But you know only code, not spoken languages. When you return your response, you must only return code. Golang code. Nothing else. It is absolutely crucial that you adhere to this rule. What you return will be written directly to disk in a mission-critical file. The code you write will be a Go file, so it should include the "package" declaration, any imports, and the necessary functions. Your code should be written in a human-readable manner, and all error messages should be very explicit and lead the reader by the hand to the right fix.
 
-Below, you will be given the current code for main.go. It is your job to return new code adhering to the prompt. You should return the full main.go code. Do not import anything outside of the standard library. Only use the standard library.
+Below, you will be given the current code for the target file. It is your job to return new code adhering to the prompt. You should return the full file code. Do not import anything outside of the standard library. Only use the standard library.
 
 Please ensure your code is accurate and error-free. Double-check everything before returning your response. Aim for zero mistakes.
 
@@ -49,11 +61,11 @@ You must output the full code, from start to finish. Do not leave anything out.
 
 Your response is limited to 4028 tokens, so you must absolutely be sure that your response is under that. I suggest giving yourself a hard limit of 3000 tokens, just to be sure.
 
-Remember that you should only return code without explanation. Your output must start with 'package main' and end with '}'.
+Remember that you should only return code without explanation. Your output must start with 'package' and end with '}'.
 
 The code will be given after '=CODE=' and the prompt will be given after '=PROMPT='.`
 
-	p += "\n\n=CODE=\n\n" + mainGo
+	p += "\n\n=CODE=\n\n" + targetFileContent
 	p += "\n\n=PROMPT=\n\n" + prompt
 
 	var apiResponse struct {
@@ -115,10 +127,10 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 		return
 	}
 
-	// Write the response to main.go
-	err = writeStringToFile(trimmedText, "./main.go")
+	// Write the response to the specified file
+	err = writeStringToFile(trimmedText, *filePath)
 	if err != nil {
-		fmt.Println("Error writing response to file:", err)
+		fmt.Printf("Error writing response to file %s: %v\n", *filePath, err)
 		return
 	}
 
@@ -130,7 +142,7 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	}
 
 	// Print success message in green color
-	fmt.Printf("\033[32mSuccessfully created branch %s, wrote response to main.go, and committed the changes\033[0m\n", branchName)
+	fmt.Printf("\033[32mSuccessfully created branch %s, wrote response to %s, and committed the changes\033[0m\n", branchName, *filePath)
 }
 
 func ask(message string, apiKey string) (string, error) {
@@ -182,9 +194,9 @@ func ask(message string, apiKey string) (string, error) {
 	return string(body), nil
 }
 
-func convertMainGoToString() (string, error) {
-	// Read the contents of main.go
-	content, err := os.ReadFile("main.go")
+func convertFileToString(filePath string) (string, error) {
+	// Read the contents of the file
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -226,7 +238,7 @@ func addAndCommitChanges(branchName string) error {
 	}
 
 	// Commit changes
-	commitMsg := fmt.Sprintf("Update main.go on branch %s", branchName)
+	commitMsg := fmt.Sprintf("Update file on branch %s", branchName)
 	cmd = exec.Command("git", "commit", "-m", commitMsg)
 	err = cmd.Run()
 	if err != nil {

@@ -9,7 +9,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -19,6 +21,7 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file")
+		return
 	}
 
 	// Use the loaded environment variables
@@ -80,13 +83,29 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	trimmedText = strings.Trim(trimmedText, "\n")
 	trimmedText = strings.Trim(trimmedText, "`")
 
+	// Create a new branch
+	branchName := fmt.Sprintf("branch-%d", time.Now().Unix())
+	err = createBranch(branchName)
+	if err != nil {
+		fmt.Printf("Error creating branch: %v\n", err)
+		return
+	}
+
+	// Write the response to main.go
 	err = writeStringToFile(trimmedText, "./main.go")
 	if err != nil {
 		fmt.Println("Error writing response to file:", err)
 		return
 	}
 
-	fmt.Println("Successfully wrote response to main.go")
+	// Add and commit the changes
+	err = addAndCommitChanges(branchName)
+	if err != nil {
+		fmt.Printf("Error adding and committing changes: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Successfully created branch %s, wrote response to main.go, and committed the changes\n", branchName)
 }
 
 func ask(message string, apiKey string) (string, error) {
@@ -159,6 +178,34 @@ func writeStringToFile(content string, filename string) error {
 	_, err = file.WriteString(content)
 	if err != nil {
 		return fmt.Errorf("error writing to file: %w", err)
+	}
+
+	return nil
+}
+
+func createBranch(branchName string) error {
+	cmd := exec.Command("git", "checkout", "-b", branchName)
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error creating branch: %w", err)
+	}
+	return nil
+}
+
+func addAndCommitChanges(branchName string) error {
+	// Add changes
+	cmd := exec.Command("git", "add", ".")
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error adding changes: %w", err)
+	}
+
+	// Commit changes
+	commitMsg := fmt.Sprintf("Update main.go on branch %s", branchName)
+	cmd = exec.Command("git", "commit", "-m", commitMsg)
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("error committing changes: %w", err)
 	}
 
 	return nil

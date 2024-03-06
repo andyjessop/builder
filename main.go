@@ -19,6 +19,16 @@ import (
 )
 
 func main() {
+	// Load environment variables from .env file
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Println("Error loading .env file")
+		return
+	}
+
+	// Use the loaded environment variables
+	apiKey := os.Getenv("API_KEY")
+
 	cwf, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -45,16 +55,6 @@ func main() {
 		fmt.Printf("Error changing to directory %s: %v\n", fileDir, err)
 		return
 	}
-
-	// Load environment variables from .env file
-	err = godotenv.Load()
-	if err != nil {
-		fmt.Println("Error loading .env file")
-		return
-	}
-
-	// Use the loaded environment variables
-	apiKey := os.Getenv("API_KEY")
 
 	scanner := bufio.NewScanner(os.Stdin)
 

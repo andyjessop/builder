@@ -103,7 +103,8 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 	trimmedText = strings.Trim(trimmedText, "`")
 
 	// Prompt for the branch name
-	fmt.Print("Enter the branch name: ")
+	fmt.Printf("\033[32mSuccessfully generated new code.\033[0m\n")
+	fmt.Print("Enter the new branch name: ")
 	scanner.Scan()
 	branchName := scanner.Text()
 

@@ -18,6 +18,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const (
+	apiURL          = "https://api.anthropic.com/v1/messages"
+	model           = "claude-3-opus-20240229"
+	contentType     = "application/json"
+	anthropicHeader = "anthropic-version"
+	anthropicValue  = "2023-06-01"
+)
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -259,9 +267,8 @@ The code for the main.go file will be given after '=CODE='.`
 }
 
 func ask(message string, apiKey string) (string, error) {
-	url := "https://api.anthropic.com/v1/messages"
 	data := map[string]interface{}{
-		"model":      "claude-3-opus-20240229",
+		"model":      model,
 		"max_tokens": 4096,
 		"messages": []map[string]string{
 			{
@@ -274,14 +281,14 @@ func ask(message string, apiKey string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error marshaling JSON: %w", err)
 	}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("error creating request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("x-api-key", apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set(anthropicHeader, anthropicValue)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

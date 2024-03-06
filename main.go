@@ -50,7 +50,6 @@ func main() {
 	fileDir := filepath.Dir(*filePath)
 
 	// Change to the file directory
-	fmt.Printf("\033[33mChanging to directory %s\033[0m\n", fileDir)
 	err = os.Chdir(fileDir)
 	if err != nil {
 		fmt.Printf("Error changing to directory %s: %v\n", fileDir, err)
@@ -77,6 +76,17 @@ func main() {
 
 	// Prompt for the branch name
 	fmt.Printf("\033[32mSuccessfully generated new code.\033[0m\n")
+
+	// Generate README.md content
+	readmeContent, err := getReadmeResponse(apiKey)
+	if err != nil {
+		fmt.Printf("Error getting README.md content: %v\n", err)
+		return
+	}
+
+	// Prompt for the branch name
+	fmt.Printf("\033[32mSuccessfully generated README.\033[0m\n")
+
 	fmt.Print("Enter the new branch name: ")
 	scanner.Scan()
 	branchName := scanner.Text()
@@ -102,13 +112,6 @@ func main() {
 		return
 	}
 
-	// Generate README.md content
-	readmeContent, err := getReadmeResponse(apiKey)
-	if err != nil {
-		fmt.Printf("Error getting README.md content: %v\n", err)
-		return
-	}
-
 	// Write the README.md content to a file
 	err = writeStringToFile(readmeContent, "README.md")
 	if err != nil {
@@ -124,7 +127,6 @@ func main() {
 	}
 
 	// Change back to the original working directory
-	fmt.Printf("\033[33mChanging back to the original directory %s\033[0m\n", cwd)
 	err = os.Chdir(cwd)
 	if err != nil {
 		fmt.Printf("Error changing back to the original directory: %v\n", err)
@@ -205,6 +207,8 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 
 func getReadmeResponse(apiKey string) (string, error) {
 	p := `You are tasked with generating a README.md file for a project. The project consists of a single file named main.go. Your job is to generate a concise and informative README.md that describes the purpose and functionality of the main.go file.
+
+Detail what the main function does from start to finish.
 
 Remember, you MUST return ONLY the markdown content for the README.md file. Do not include any other explanations or additional text. It is absolutely crucial that you adhere to this rule.
 

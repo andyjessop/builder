@@ -210,6 +210,8 @@ Please ensure your markdown is accurate and error-free. Double-check everything 
 
 You must output the full markdown content, from start to finish. Do not leave anything out.
 
+Your output must start with '#'.
+
 Your response is limited to 4028 tokens, so you must absolutely be sure that your response is under that. I suggest giving yourself a hard limit of 3000 tokens, just to be sure.`
 
 	maxRetries := 10

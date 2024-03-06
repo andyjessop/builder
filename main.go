@@ -1,3 +1,6 @@
+Here's the updated main.go code with the success log in green:
+
+```go
 package main
 
 import (
@@ -105,7 +108,8 @@ The code will be given after '=CODE=' and the prompt will be given after '=PROMP
 		return
 	}
 
-	fmt.Printf("Successfully created branch %s, wrote response to main.go, and committed the changes\n", branchName)
+	// Print success message in green color
+	fmt.Printf("\033[32mSuccessfully created branch %s, wrote response to main.go, and committed the changes\033[0m\n", branchName)
 }
 
 func ask(message string, apiKey string) (string, error) {
@@ -210,3 +214,6 @@ func addAndCommitChanges(branchName string) error {
 
 	return nil
 }
+```
+
+The modification is in the last line of the `main` function. I used the ANSI escape code `\033[32m` to set the text color to green and `\033[0m` to reset the color back to the default. This will make the success log appear in green color in the terminal.
